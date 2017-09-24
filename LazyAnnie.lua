@@ -15,63 +15,51 @@ Callback.Add("Load", function() Program:OnLoad() end)
                                              
 ]]--
 
-class "Spell"
-
-function Spell:IsReadyToCast(slot)
+function IsReadyToCast(slot)
 	return Game.CanUseSpell(slot) == 0
 end
 
-function Spell:CastQ(unit)
-
-	if unit ~= nil then
-
-		if Spell:IsReadyToCast(_Q) then
-			if myHero.pos:DistanceTo(unit.pos) <= Annie.Q.range + unit.boundingRadius + myHero.boundingRadius then
-				Orb:DisableAttacks(true)
-				if myHero.pos:DistanceTo(unit.pos) <= Annie.Q.range then
-					Orb:Disable(true)
-					Control.SetCursorPos(unit.pos)
-					Control.KeyDown(HK_Q)
-					Control.KeyUp(HK_Q)
-					DelayAction(function() Orb:Disable(false) end, 0.25)
-				end
-			end
-		end	
-	end
+function IsValid(range, unit)
+	return unit:IsValidTarget(range, nil, myHero) and not unit.isImmortal and unit.health > 0 and not unit.dead
 end
 
-function Spell:CastW(unit)
+function GetLastSpellCast()
+	local timer = 0
+	if myHero.activeSpell.valid and myHero.isChanneling then 
+		timer = GetTickCount()
+	end
+	return timer
+end
 
-	if unit ~= nil then
+function CastQ(unit)
 
-		local wPred = unit:GetPrediction(Annie.W.speed, Annie.W.delay)
-
-		if Spell:IsReadyToCast(_W) then 
-			if myHero.pos:DistanceTo(wPred) < Annie.W.range then
-				Orb:Disable(true)
-				Control.SetCursorPos(wPred)
-				Control.KeyDown(HK_W)
-				Control.KeyUp(HK_W)
-				DelayAction(function() Orb:Disable(false) end, 0.25)
-			end
+	if IsReadyToCast(_Q) and IsValid(Annie.Q.range, unit) and myHero.pos:DistanceTo(unit.pos) < Annie.Q.range and GetLastSpellCast() + 250 < GetTickCount() then
+		if Annie.menu.customCast:Value() then 
+			CastSpell2(HK_Q, unit.pos)
+		else
+			Control.CastSpell(HK_Q, unit.pos)
 		end
 	end
 end
 
-function Spell:CastR(unit)
+function CastW(unit)
 
-	if unit ~= nil and myHero:GetSpellData(_R).name == "InfernalGuardian" then
+	if IsReadyToCast(_W) and IsValid(Annie.W.range, unit) and myHero.pos:DistanceTo(unit.pos) < Annie.W.range and GetLastSpellCast() + 250 < GetTickCount() then
+		if Annie.menu.customCast:Value() then 
+			CastSpell2(HK_W, unit.pos)
+		else
+			Control.CastSpell(HK_W, unit.pos)
+		end
+	end
+end
 
-		local rPred = unit:GetPrediction(Annie.R.speed, Annie.R.delay)
+function CastR(unit)
 
-		if Spell:IsReadyToCast(_R) then 
-			if myHero.pos:DistanceTo(rPred) < Annie.R.range + 125 then
-				Orb:Disable(true)
-				Control.SetCursorPos(rPred)
-				Control.KeyDown(HK_R)
-				Control.KeyUp(HK_R)
-				DelayAction(function() Orb:Disable(false) end, 0.25)
-			end
+	if IsReadyToCast(_R) and IsValid(Annie.R.range, unit) and myHero.pos:DistanceTo(unit.pos) < Annie.R.range and GetLastSpellCast() + 250 < GetTickCount() then
+		if Annie.menu.customCast:Value() then 
+			CastSpell2(HK_R, unit.pos)
+		else
+			Control.CastSpell(HK_R, unit.pos)
 		end
 	end
 end
@@ -92,65 +80,21 @@ end
 
 class "Annie"
 
-function Annie:Qdmg(unit)
+function Annie:GetDmg(unit)
 
-	local qSpellData = myHero:GetSpellData(_Q)
+	local damage = 0
 
-	if myHero.mana >= qSpellData.mana and qSpellData.level > 0 then 
-		return getdmg("Q", unit, myHero)
-	else return 0 end
-end
+	if IsReadyToCast(_Q) then
+		damage = damage + getdmg("Q", unit, myHero)
+	end
+	if IsReadyToCast(_W) then
+		damage = damage + getdmg("W", unit, myHero)
+	end
+	if IsReadyToCast(_R) then
+		damage = damage + getdmg("R", unit, myHero)
+	end
 
-function Annie:Wdmg(unit)
-
-	local wSpellData = myHero:GetSpellData(_W)
-
-	if myHero.mana >= wSpellData.mana and wSpellData.level > 0 then 
-		return getdmg("W", unit, myHero)
-	else return 0 end
-end
-
-function Annie:Rdmg(unit)
-
-	local rSpellData = myHero:GetSpellData(_R)
-
-	if Spell:IsReadyToCast(_R) then
-		return getdmg("R", unit, myHero)
-	else return 0 end		
-end
-
-function Annie:QWdmg(unit)
-
-	local qSpellData = myHero:GetSpellData(_Q)
-	local wSpellData = myHero:GetSpellData(_W)
-
-	if myHero.mana >= qSpellData.mana + wSpellData.mana and
-		qSpellData.level > 0 and wSpellData.level > 0 then
-		return getdmg("Q", unit, myHero) + getdmg("W", unit, myHero)
-	else return 0 end
-end
-
-function Annie:QRdmg(unit)
-
-	local qSpellData = myHero:GetSpellData(_Q)
-	local rSpellData = myHero:GetSpellData(_R)
-
-	if myHero.mana >= qSpellData.mana + rSpellData.mana and
-		qSpellData.level > 0 and Spell:IsReadyToCast(_R) then
-		return getdmg("Q", unit, myHero) + getdmg("R", unit, myHero)
-	else return 0 end
-end
-
-function Annie:QWRdmg(unit)
-
-	local qSpellData = myHero:GetSpellData(_Q)
-	local wSpellData = myHero:GetSpellData(_W)
-	local rSpellData = myHero:GetSpellData(_R)
-
-	if myHero.mana >= qSpellData.mana + wSpellData.mana + rSpellData.mana and
-		qSpellData.level > 0 and wSpellData.level > 0 and Spell:IsReadyToCast(_R) then
-		return getdmg("Q", unit, myHero) + getdmg("W", unit, myHero) + getdmg("R", unit, myHero)
-	else return 0 end
+	return damage
 end
 
 function Annie:GetManaPercent(unit)
@@ -160,11 +104,11 @@ end
 function Annie:GetTarget(range)
 
 	if _G.EOWLoaded then
-		return _G.EOW:GetTarget(range, _G.EOW.ap_dec, myHero.pos)
-	elseif _G.SDK.Orbwalker then
+		return EOW:GetTarget(range, EOW.ap_dec, myHero.pos)
+	elseif _G.SDK then
 		return _G.SDK.TargetSelector:GetTarget(range, _G.SDK.DAMAGE_TYPE_MAGICAL)
 	elseif _G.GOS then
-		return _G.GOS:GetTarget(range, "AP")
+		return GOS:GetTarget(range, "AP")
 	end
 end
 
@@ -172,6 +116,7 @@ function Annie:__init()
 
 	self.Nudes = 	
 	{ 	
+		Swaghetti = "https://i.imgur.com/KdslWVD.png",
 		Hero = "https://i.imgur.com/dxui3s2.png",
 		Passive = "https://i.imgur.com/f4p3IjG.png",
 		Q = "https://i.imgur.com/HUj9ZuK.png",
@@ -181,11 +126,37 @@ function Annie:__init()
 		Tear = "https://i.imgur.com/7sREK0V.png"
 	}
 
+	self.RecallData = {}
+
 	self:LoadMenu()
 	self:LoadSpells()
 
 	Callback.Add("Tick", function() self:OnTick() end)
 	Callback.Add("Draw", function() self:OnDraw() end)
+	Callback.Add("ProcessRecall", function(unit, proc) self:OnRecall(unit, proc) end)
+end
+
+function Annie:OnRecall(unit, proc)
+	if unit.networkID == myHero.networkID then
+		if proc.isStart then
+    		table.insert(self.RecallData, {object = unit})
+    	else
+      		for i, rc in pairs(self.RecallData) do
+        		if rc.object.networkID == unit.networkID then
+         	 		table.remove(self.RecallData, i)
+        		end
+      		end
+      	end
+	end
+end
+
+function Annie:IsRecalling()
+	for i, recall in pairs(self.RecallData) do
+    	if recall.object.networkID == myHero.networkID then
+    		return true
+	    end
+	end
+	return false
 end
 
 function Annie:LoadSpells()
@@ -198,6 +169,7 @@ function Annie:LoadMenu()
 
 	self.menu = MenuElement({id = "menu", name = "Lazy Annie", type = MENU, leftIcon = self.Nudes.Hero })
 
+	self.menu:MenuElement({id = "customCast", name = "Use Custom SpellCast", value = true, leftIcon = self.Nudes.Swaghetti}) -- bool
 	self.menu:MenuElement({id = "Combo", name = "Combo", type = MENU})
 	self.menu:MenuElement({id = "Harass", name = "Harras", type = MENU})
 	self.menu:MenuElement({id = "LaneClear", name = "LaneClear", type = MENU})
@@ -243,20 +215,24 @@ end
 
 function Annie:OnTick()
 
-	Orb:GetMode()
+	if myHero.dead then return end
 
-	if Orb.combo then
-		self:Combo()
-	elseif Orb.harass then
-		self:Harass()
+	Orb:GetMode()
+	GetLastSpellCast()
+
+	local target = self:GetTarget(800)
+
+	if Orb.combo and target ~= nil then
+		self:Combo(target)
+	elseif Orb.harass and target ~= nil then
+		self:Harass(target)
 	elseif Orb.lastHit then
 		self:LastHit()
-	elseif Orb.laneClear or Orb.jungleClear then
-		self:LaneClear()
-		self:JungleClear()		
+	elseif Orb.laneClear then
+		self:LaneClear()		
 	end
 
-	if self.menu.Misc.stack:Value() then
+	if self.menu.Misc.stack:Value() and not self:IsRecalling() then
 		self:AutoStack()
 	end
 end
@@ -266,7 +242,7 @@ function Annie:OnDraw()
 	local heroPos2D = myHero.pos:To2D()
 
 	if self.menu.Misc.stack:Value() then
-		Draw.Text("Stacking ENABLED", 10, heroPos2D.x - 40, heroPos2D.y + 80, Draw.Color(255, 222, 000, 022)) -- Not even random
+		Draw.Text("Stacking ENABLED", 10, heroPos2D.x - 40, heroPos2D.y + 80, Draw.Color(255, 222, 000, 088)) -- Not even random
 	end
 end
 
@@ -274,78 +250,89 @@ function Annie:AutoStack()
 
 	local fountain = Obj_AI_SpawnPoint
 
-	if Spell:IsReadyToCast(_W) then
+	if IsReadyToCast(_W) and GetLastSpellCast() + 250 < GetTickCount() then
 
 		if myHero.pos:DistanceTo(fountain) <= 900 and myHero.hudAmmo ~= myHero.hudMaxAmmo then
-			Control.KeyDown(HK_W)
+			Control.KeyDown(HK_W) 
 			Control.KeyUp(HK_W)
 		end
 	end
 
-	if Spell:IsReadyToCast(_E) then 
+	if IsReadyToCast(_E) and GetLastSpellCast() + 250 < GetTickCount() then 
 		
 		if myHero.hudAmmo ~= myHero.hudMaxAmmo then
-			Control.KeyDown(HK_E)
+			Control.KeyDown(HK_E) 
 			Control.KeyUp(HK_E)
 		end
 	end
 end
 
-function Annie:Combo()
+function CastSpell2(spell,pos,delay) -- Noddy
 
-	-- Q --
-	if self.menu.Combo.useQ:Value() and Spell:IsReadyToCast(_Q) then
-		local target = self:GetTarget(self.Q.range + 100)
+	local castSpell = {state = 0, tick = GetTickCount(), casting = GetTickCount() - 1000, mouse = mousePos}
+	local delay = delay or 250
+	local ticker = GetTickCount()
 
-		if target ~= nil then
-			Spell:CastQ(target)	return
-		end
+	if pos == nil then return end
+
+	if castSpell.state == 0 and ticker - castSpell.casting > delay + Game.Latency() then
+		castSpell.state = 1
+		castSpell.mouse = mousePos
+		castSpell.tick = ticker
 	end
 
-	-- W --
-	if self.menu.Combo.useW:Value() and Spell:IsReadyToCast(_W) then
-		local target = self:GetTarget(self.W.range)
+	if castSpell.state == 1 then
 
-		if target ~= nil then
-			Spell:CastW(target) return
+		if ticker - castSpell.tick < Game.Latency() then
+			Control.SetCursorPos(pos)
+			Control.KeyDown(spell)
+			Control.KeyUp(spell)
+			castSpell.casting = ticker + delay
+			DelayAction(function()
+				if castSpell.state == 1 then
+					Control.SetCursorPos(castSpell.mouse)
+					castSpell.state = 0
+				end
+			end, Game.Latency()/1000)
 		end
-	end
 
-	-- R --
-	if self.menu.Combo.useR:Value() and Spell:IsReadyToCast(_R) then
-		local target = self:GetTarget(725) 
-
-		if target ~= nil then
-
-			if target.health <= self:Rdmg(target) and myHero.pos:DistanceTo(target.pos) < self.R.range then
-				Spell:CastR(target)
-			elseif target.health <= self:QRdmg(target) and myHero.pos:DistanceTo(target.pos) < self.Q.range then
-				Spell:CastR(target)
-			elseif target.health <= self:QWRdmg(target) and myHero.pos:DistanceTo(target.pos) < self.W.range then
-				Spell:CastR(target)
-			end
+		if ticker - castSpell.casting > Game.Latency() then
+			Control.SetCursorPos(castSpell.mouse)
+			castSpell.state = 0
 		end
 	end
 end
 
-function Annie:Harass()
+function Annie:Combo(target)
 
 	-- Q --
-	if self.menu.Harass.useQ:Value() and Spell:IsReadyToCast(_Q) and self:GetManaPercent(myHero) > self.menu.Harass.useQmana:Value() then
-		local target = self:GetTarget(self.Q.range + 100)
-
-		if target ~= nil then
-			Spell:CastQ(target) return
-		end
+	if self.menu.Combo.useQ:Value() then
+		CastQ(target)
 	end
 
 	-- W --
-	if self.menu.Harass.useW:Value() and Spell:IsReadyToCast(_W) and self:GetManaPercent(myHero) > self.menu.Harass.useWmana:Value() then
-		local target = self:GetTarget(self.W.range)
+	if self.menu.Combo.useW:Value() then
+		CastW(target)
+	end
 
-		if target ~= nil then
-			Spell:CastW(target)
+	-- R --
+	if self.menu.Combo.useR:Value() then
+		if target.health <= self:GetDmg(target) then
+			CastR(target)
 		end
+	end
+end
+
+function Annie:Harass(target)
+
+	-- Q --
+	if self.menu.Harass.useQ:Value() and self:GetManaPercent(myHero) > self.menu.Harass.useQmana:Value() then
+		CastQ(target)
+	end
+
+	-- W --
+	if self.menu.Harass.useW:Value() and self:GetManaPercent(myHero) > self.menu.Harass.useQmana:Value() then
+		CastW(target)
 	end
 end
 
@@ -357,7 +344,7 @@ function Annie:LaneClear()
 		for i = 0, Game.MinionCount() do
 
 			local m = Game.Minion(i)
-			if m and m.isEnemy and m.valid and not m.dead and m.health < self:Qdmg(m) and myHero.pos:DistanceTo(m.pos) < self.Q.range then
+			if m and m.isEnemy and m.valid and not m.dead and m.health < getdmg("Q", m) and myHero.pos:DistanceTo(m.pos) < self.Q.range then
 				qMinion = m
 				break
 			end
@@ -365,9 +352,9 @@ function Annie:LaneClear()
 	end
 
 	if qMinion ~= nil then
-		if Spell:IsReadyToCast(_Q) and self.menu.LaneClear.useQ:Value() and
+		if self.menu.LaneClear.useQ:Value() and
 			self:GetManaPercent(myHero) > self.menu.LaneClear.useQmana:Value() then
-			Spell:CastQ(qMinion)
+			CastQ(qMinion)
 		end
 	end
 end
@@ -380,7 +367,7 @@ function Annie:LastHit()
 		for i = 0, Game.MinionCount() do
 
 			local m = Game.Minion(i)
-			if m and m.isEnemy and m.valid and not m.dead and m.health < self:Qdmg(m) and myHero.pos:DistanceTo(m.pos) < self.Q.range then
+			if m and m.isEnemy and m.valid and not m.dead and m.health < getdmg("Q", m) and myHero.pos:DistanceTo(m.pos) < self.Q.range then
 				qMinion = m
 				break
 			end
@@ -388,37 +375,9 @@ function Annie:LastHit()
 	end
 
 	if qMinion ~= nil then
-		if Spell:IsReadyToCast(_Q) and self.menu.LastHit.useQ:Value() and
+		if self.menu.LastHit.useQ:Value() and
 			self:GetManaPercent(myHero) > self.menu.LastHit.useQmana:Value() then
-			Spell:CastQ(qMinion)
-		end
-	end
-end
-
-function Annie:JungleClear()
-
-	local mob
-	
-	if Game.CampCount() > 0 then
-		for i = 0, Game.CampCount() do
-
-			local m = Game.Camp(i)
-			if m and m.isEnemy and m.valid and not m.dead and myHero.pos:DistanceTo(m.pos) < self.Q.range then
-				mob = m
-				break
-			end
-		end
-	end
-
-	if mob ~= nil then
-		if Spell:IsReadyToCast(_Q) and self.menu.JungleClear.useQ:Value() and 
-			self:GetManaPercent(myHero) > self.menu.JungleClear.useQmana:Value() then
-			Spell:CastQ(mob) return
-		end
-
-		if Spell:IsReadyToCast(_W) and self.menu.JungleClear.useW:Value() and 
-			self:GetManaPercent(myHero) > self.menu.JungleClear.useWmana:Value() then
-			Spell:CastW(mob)
+			CastQ(qMinion)
 		end
 	end
 end
@@ -450,7 +409,7 @@ function Program:OnLoad()
 
 	local orb = ""
 
-	if _G.SDK.Orbwalker then
+	if _G.SDK then
 		orb = "IC's Orbwalker"
 	elseif _G.EOWLoaded then	
 		orb = "Eternal Orbwalker"	
@@ -487,15 +446,17 @@ function Orb:GetMode()
 		
 	if _G.EOWLoaded then
 
-		self.combo = _G.EOW:Mode() == 1
-		self.harass = _G.EOW:Mode() == 2
-	    self.lastHit = _G.EOW:Mode() == 3
-	    self.laneClear = _G.EOW:Mode() == 4
-	    self.jungleClear = _G.EOW:Mode() == 4
+		local mode = EOW:Mode()
 
-		self.canmove = _G.EOW:CanMove()
-		self.canattack = _G.EOW:CanAttack()
-	elseif _G.SDK.Orbwalker then
+		self.combo = mode == 1
+		self.harass = mode == 2
+	    self.lastHit = mode == 3
+	    self.laneClear = mode == 4
+	    self.jungleClear = mode == 4
+
+		self.canmove = EOW:CanMove()
+		self.canattack = EOW:CanAttack()
+	elseif _G.SDK then
 
 		self.combo = _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_COMBO]
 		self.harass = _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_HARASS]
@@ -507,50 +468,52 @@ function Orb:GetMode()
 		self.canattack = _G.SDK.Orbwalker:CanAttack(myHero)
 	elseif _G.GOS then
 
-		self.combo = _G.GOS:GetMode() == "Combo"
-		self.harass = _G.GOS:GetMode() == "Harass"
-	    self.lastHit = _G.GOS:GetMode() == "Lasthit"
-	    self.laneClear = _G.GOS:GetMode() == "Clear"
-	    self.jungleClear = _G.GOS:GetMode() == "Clear"
+		local mode = GOS:GetMode()
 
-		self.canMove = _G.GOS:CanMove()
-		self.canAttack = _G.GOS:CanAttack()	
+		self.combo = mode == "Combo"
+		self.harass = mode == "Harass"
+	    self.lastHit = mode == "Lasthit"
+	    self.laneClear = mode == "Clear"
+	    self.jungleClear = mode == "Clear"
+
+		self.canMove = GOS:CanMove()
+		self.canAttack = GOS:CanAttack()	
 	end
 end
 
 function Orb:Disable(bool)
 
-	if _G.SDK.Orbwalker then
+	if _G.SDK then
 		_G.SDK.Orbwalker:SetMovement(not bool)
 		_G.SDK.Orbwalker:SetAttack(not bool)
 	elseif _G.EOWLoaded then
-		_G.EOW:SetAttacks(not bool)
-		_G.EOW:SetMovements(not bool)
+		EOW:SetAttacks(not bool)
+		EOW:SetMovements(not bool)
 	elseif _G.GOS then
-		_G.GOS.BlockMovement = bool
-		_G.GOS.BlockAttack = bool
+		GOS.BlockMovement = bool
+		GOS.BlockAttack = bool
 	end
 end
 
 function Orb:DisableAttacks(bool)
 
-	if _G.SDK.Orbwalker then
+	if _G.SDK then
 		_G.SDK.Orbwalker:SetAttack(not bool)
 	elseif _G.EOWLoaded then
-		_G.EOW:SetAttacks(not bool)
+		EOW:SetAttacks(not bool)
 	elseif _G.GOS then
-		_G.GOS.BlockAttack = bool
+		GOS.BlockAttack = bool
 	end
 end
 
 function Orb:DisableMovement(bool)
 
-	if _G.SDK.Orbwalker then
+	if _G.SDK then
 		_G.SDK.Orbwalker:SetMovement(not bool)
 	elseif _G.EOWLoaded then
-		_G.EOW:SetMovements(not bool)
+		EOW:SetMovements(not bool)
 	elseif _G.GOS then
-		_G.GOS.BlockMovement = bool
+		GOS.BlockMovement = bool
 	end
 end
 
