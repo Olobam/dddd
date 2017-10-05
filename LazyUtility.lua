@@ -8,13 +8,16 @@ function LazyUtility:OnLoad()
 	{ 	
 		Sexy = "https://i.imgur.com/swMci7o.png",
 		Rainbows = "https://i.imgur.com/oeDGue7.png",
-		Buttplug = "https://i.imgur.com/mziKdq5.png"
+		Buttplug = "https://i.imgur.com/mziKdq5.png" 
 	}
 
 	self:LoadMenu()
 	self:CreateHeroTable()
 
+	self.RecallData = {}
+
 	Callback.Add("Draw", function() self:OnDraw() end)
+	Callback.Add("ProcessRecall", function(unit, proc) self:OnRecall(unit, proc) end)
 end
 
 function LazyUtility:LoadMenu()
@@ -139,18 +142,27 @@ end
 function LazyUtility:TrackHeroes()
 
 	for i, v in pairs(heroTable) do
+		local shortTime = tonumber(string.format("%.1f", (GetTickCount()*0.001 - v.lastSeen*0.001)))
+		local shortName = string.sub(v.hero.charName, 0, 4)
+		if self:IsRecalling(v.hero) then
+			local recall = 0 
+			for i, rc in pairs(self.RecallData) do
+				if rc.object.networkID == v.hero.networkID then
+					recall = tonumber(string.format("%.1f",(rc.start + rc.duration - GetTickCount()) * 0.001))
+				end				
+			end
+			Draw.CircleMinimap(v.hero.pos, 900, 2, Draw.Color(255, 100, 150, 255)) --  Blue for recalls #lazy
+			Draw.Text(shortName.. "  RECALL", 6, v.hero.pos:ToMM().x - 20, v.hero.pos:ToMM().y, Draw.Color(255, 50, 150, 255)) -- on MM
+			Draw.Text(v.hero.charName.. " Recalling ( "..recall.." )", 12, v.hero.pos:To2D(), Draw.Color(255, 50, 150, 255)) -- on ground
+		return end
 		if v.hero.visible then
-			heroTable[i].lastSeen = GetTickCount()			
+			heroTable[i].lastSeen = GetTickCount()		
 		elseif not v.hero.visible and not v.hero.dead then
-
-			Draw.CircleMinimap(v.hero.pos, 900, 2, Draw.Color(255, 255, 0, 0)) -- Circle on MM
-
-			local shortTime = tonumber(string.format("%.1f", (GetTickCount()*0.001 - v.lastSeen*0.001)))
-			local shortName = string.sub(v.hero.charName, 0, 4)
-
-			Draw.Text(shortName.. ": " ..shortTime, 9, v.hero.pos:ToMM().x - 20, v.hero.pos:ToMM().y, Draw.Color(255, 255, 255, 255)) -- Text on MM
-
-			Draw.Text(shortName.. ": " ..shortTime, 9, v.hero.pos:To2D(), Draw.Color(255, 255, 255, 255)) -- draw on ground aswell
+			if not self:IsRecalling(v.hero) then
+				Draw.CircleMinimap(v.hero.pos, 900, 2, Draw.Color(255, 255, 0, 0)) -- Circle on MM
+			end		
+				Draw.Text(shortName.. ": " ..shortTime, 9, v.hero.pos:ToMM().x - 20, v.hero.pos:ToMM().y, Draw.Color(255, 255, 255, 255)) -- Text on MM
+				Draw.Text(v.hero.charName.. " MISSING: : " ..shortTime, 12, v.hero.pos:To2D(), Draw.Color(255, 50, 255, 255)) -- draw on ground aswell
 		end
 	end
 
@@ -164,5 +176,28 @@ function LazyUtility:OnDraw()
 	if self.Menu.mMtracker.show:Value() then
 		self:TrackHeroes()
 	end
+end
 
+function LazyUtility:OnRecall(unit, proc)
+	if proc.isStart then
+    		table.insert(self.RecallData, { object = unit, start = GetTickCount(), duration = proc.totalTime })
+    else
+      	for i, rc in pairs(self.RecallData) do
+        	if rc.object.networkID == unit.networkID then
+          		table.remove(self.RecallData, i)
+       		end
+  		end
+    end
+end
+
+
+
+function LazyUtility:IsRecalling(unit)
+	for i, recall in pairs(self.RecallData) do
+		if unit ~= nil then
+    		if recall.object.networkID == unit.networkID then
+    			return true end
+	    	else return false
+	    end
+	end
 end
