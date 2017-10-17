@@ -25,10 +25,10 @@ end
 
 function LazyEvelynn:LoadSpells()
 
-	self.Q = { range = 800, width = myHero:GetSpellData(_Q).width, delay = 0.25, speed = myHero:GetSpellData(_Q).speed }
-    self.W = { range = 1200, width = myHero:GetSpellData(_W).width, delay = 0.25, speed = myHero:GetSpellData(_W).speed }
-    self.E = { range = 225, width = myHero:GetSpellData(_E).width, delay = 0.25, speed = myHero:GetSpellData(_E).speed }
-    self.R = { range = 450, width = 250, delay = 0.25, speed = math.huge }
+	self.Q = { range = 775, width = myHero:GetSpellData(_Q).width, delay = 0.25, speed = myHero:GetSpellData(_Q).speed }
+    self.W = { range = 800, width = myHero:GetSpellData(_W).width, delay = 0.25, speed = myHero:GetSpellData(_W).speed }
+    self.E = { range = 275, width = myHero:GetSpellData(_E).width, delay = 0.25, speed = myHero:GetSpellData(_E).speed }
+    self.R = { range = 450, width = 100, delay = 0.25, speed = math.huge }
 end
 
 function LazyEvelynn:LoadMenu()
@@ -94,7 +94,7 @@ function LazyEvelynn:IsReadyToCast(slot)
 end
 
 function LazyEvelynn:IsValid(range, unit)
-	return unit:IsValidTarget(range, nil, myHero) and unit.pos:DistanceTo(myHero.pos) < range and not unit.isImmortal and unit.health > 0 and not unit.dead
+	return unit:IsValidTarget(range, nil, myHero) and not unit.isImmortal and unit.health > 0 and not unit.dead and self:GetDistance(myHero.pos, unit.pos) <= range
 end
 
 function LazyEvelynn:GetDistanceSqr(p1, p2)
@@ -198,7 +198,7 @@ function LazyEvelynn:OnTick()
 
 	Orb:GetMode()
 
-	self.target = self:GetTarget(1200)
+	self.target = self:GetTarget(800)
 
 	if Orb.combo and self.target ~= nil then
 		self:Combo(self.target)
@@ -211,32 +211,35 @@ function LazyEvelynn:OnTick()
 	end
 end
 
+local isQ1 = myHero:GetSpellData(_Q).name == "EvelynnQ"
+local wName = myHero:GetSpellData(_W).name
+local qAmmo = myHero:GetSpellData(_Q).ammo
+local heroMana = myHero.mana
+
 function LazyEvelynn:Combo(target)
 
-	local isQ1 = myHero:GetSpellData(_Q).name == "EvelynnQ"
 	local wQmana = myHero:GetSpellData(_Q).mana + myHero:GetSpellData(_W).mana
-	local heroMana = myHero.mana
 
 	if self.target == nil then return end
 
     -- Q --
     if self:IsReadyToCast(_Q) and self:IsValid(self.Q.range, self.target) and self.menu.Combo.useQ:Value() then
 		
-		local qAmmo = myHero:GetSpellData(_Q).ammo
 		if isQ1 then
         	if self.target:GetCollision(self.Q.width, self.Q.speed, self.Q.delay) == 0 then
 				Control.CastSpell(HK_Q, self.target.pos)
 			elseif self:GetHpPercent(self.target) < 40 then
 				Control.CastSpell(HK_Q, self.target.pos)
 			return end
-		elseif qAmmo > 0 then
+		elseif not isQ1 and qAmmo > 0 then
 			Control.KeyDown(HK_Q)
-			Control.KeyUp(HK_Q)
+			DelayAction(function()
+				Control.KeyUp(HK_Q) end, 0.0420)
 		end
 	return end
 
 	-- W --
-	if self:IsReadyToCast(_W) and heroMana > wQmana and self:IsValid(self.W.range, self.target) and self.menu.Combo.useW:Value() then
+	if self:IsReadyToCast(_W) and heroMana > wQmana and self:IsValid(self.W.range, self.target) and self.menu.Combo.useW:Value() and wName == "EvelynnW" then
 		Control.CastSpell(HK_W, self.target)
 	return end
 
@@ -253,9 +256,7 @@ end
 
 function LazyEvelynn:Harass(target)
 
-	local isQ1 = myHero:GetSpellData(_Q).name == "EvelynnQ"
 	local wQmana = myHero:GetSpellData(_Q).mana + myHero:GetSpellData(_W).mana
-	local heroMana = myHero.mana
 
 	if self.target == nil then return end
 
@@ -268,14 +269,15 @@ function LazyEvelynn:Harass(target)
 			elseif self:GetHpPercent(self.target) < 40 then
 				Control.CastSpell(HK_Q, self.target.pos)
 			return end
-		elseif qAmmo > 0 then
+		elseif not isQ1 and qAmmo > 0 then
 			Control.KeyDown(HK_Q)
-			Control.KeyUp(HK_Q)
+			DelayAction(function()
+				Control.KeyUp(HK_Q) end, 0.0420)	
 		end
 	return end
 
 	-- W --
-	if self:IsReadyToCast(_W) and heroMana > wQmana and self:IsValid(self.W.range, self.target) and
+	if self:IsReadyToCast(_W) and heroMana > wQmana and self:IsValid(self.W.range, self.target) and wName == "EvelynnW" and
  		self.menu.Harass.useW:Value() and self:GetManaPercent(myHero) > self.menu.Harass.useWmana:Value() then
 		Control.CastSpell(HK_W, self.target)
 	return end
@@ -288,9 +290,7 @@ end
 
 function LazyEvelynn:Clear()
 
-	local isQ1 = myHero:GetSpellData(_Q).name == "EvelynnQ"
 	local qMinion
-	local qAmmo = myHero:GetSpellData(_Q).ammo
 
 	if Game.MinionCount() > 0 then
 		for i = 0, Game.MinionCount() do
