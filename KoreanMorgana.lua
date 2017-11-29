@@ -408,6 +408,10 @@ function KoreanMorgana:OnTick()
 		
 		self:GetOrbMode()
 
+		if self:IsReady(_E) then
+			self:AutoE()
+		end
+
 		if self.combo then
 			if GetTickCount() - timer.tick > 4000 then
 				timer.state = 0
@@ -417,9 +421,6 @@ function KoreanMorgana:OnTick()
 			end	
 			if self:IsReady(_W) then
 				self:AutoW()
-			end
-			if self:IsReady(_E) then
-				self:AutoE()
 			end
 		end
 	end
