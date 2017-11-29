@@ -223,20 +223,6 @@ function KoreanMorgana:IsReady (spell)
 	return Game.CanUseSpell(spell) == 0 
 end
 
-function KoreanMorgana:GetAlliedHeroesInRange(pos, range)
-	local _AllyHeroes = {}
-
-  	for i = 1, Game.HeroCount() do
-    	local unit = Game.Hero(i)
-    	if unit and unit.isAlly then
-	  		if self:GetDistance(unit.pos, pos) <= range then
-	  			table.insert(_AllyHeroes, unit)
-    		end
-  		end
-  	end
-  	return _AllyHeroes
-end
-
 function KoreanMorgana:GetDistanceSqr(p1, p2)
     local dx = p1.x - p2.x
     local dz = p1.z - p2.z
@@ -260,15 +246,15 @@ function KoreanMorgana:AutoE()
 				local currSpell = hero.activeSpell
 				local spellPos = currSpell.placementPos
 
-				for i, ally in pairs(self:GetAlliedHeroesInRange(myHero.pos, self.Q.range)) do
-
-					if ally and ally.networkID ~= myHero.networkID then
-						if self:GetDistance(spellPos, ally.pos) < 100 or currSpell.target == ally.handle then
-							Control.CastSpell(HK_E, ally.pos)
+				for i = 1, Game.HeroCount() do
+    			local ally = Game.Hero(i)
+    				if ally and ally.isAlly then
+	  					if self:GetDistance(ally.pos, myHero.pos) < 100 or currSpell.target == ally.handle then
+	  						Control.CastSpell(HK_E, myHero.pos)
 							self.tickAction = true
-						end
-					end
-				end
+    					end
+  					end
+  				end
 
 				if self:GetDistance(spellPos, myHero.pos) < 100 or currSpell.target == myHero.handle then
 					Control.CastSpell(HK_E, myHero.pos)
