@@ -70,7 +70,7 @@ function KoreanMorgana:init()
 end
 
 function KoreanMorgana:LoadMenu()
-	self.Menu = MenuElement({type = MENU, id = "KoreanMorgana", name = "Korean Morgana", leftIcon = "http://i.imgur.com/B1yTPrK.png"})
+	self.Menu = MenuElement({type = MENU, id = "KoreanMorgana", name = "Korean Morgana", leftIcon = "http://i.imgur.com/B1yTPrK.png", tooltip = "DamnedNooB Edition"})
 	self.Menu:MenuElement({type = MENU, id = "Combo", name = "Korean Morgana - Combo Settings"})
 	self.Menu.Combo:MenuElement({id = "HotKeyChanger", name = "Q Hotkey Changer | Wait for AA or Spell", key = 0x5a, toggle = true, value = false})
 	self.Menu.Combo:MenuElement({id = "ComboQ", name = "Use Q", value = true})
@@ -188,6 +188,15 @@ function KoreanMorgana:Prediction(unit)
 
 end
 
+local items = { [ITEM_1] = HK_ITEM_1, [ITEM_2] = HK_ITEM_2, [ITEM_3] = HK_ITEM_3, [ITEM_4] = HK_ITEM_4, [ITEM_5] = HK_ITEM_5, [ITEM_6] = HK_ITEM_6 }
+
+function KoreanMorgana:GetInventoryItem(itemID)
+	for _, i in pairs({ ITEM_1, ITEM_2, ITEM_3, ITEM_4, ITEM_5, ITEM_6 }) do
+		if myHero:GetItemData(i).itemID == itemID and myHero:GetSpellData(i).currentCd == 0 then return i end
+	end
+	return nil
+end
+
 function KoreanMorgana:GetTarget(range)
 
 	if _G.EOWLoaded then
@@ -220,6 +229,24 @@ function KoreanMorgana:IsSnared(unit)
 	return false	
 end
 
+function KoreanMorgana:Ulting()
+	if myHero.isChanneling then
+		local check = myHero.activeSpell.valid and myHero.activeSpellSlot == _R
+		if check then
+			return true
+		end
+	end
+	return false 
+end
+
+function KoreanMorgana:LazyZhonyas()
+	local zhonyas = self:GetInventoryItem(3157)
+
+	if self:Ulting() and zhonyas then
+		Control.CastSpell(items[zhonyas])
+	end		
+end
+
 function KoreanMorgana:IsReady (spell)
 	return Game.CanUseSpell(spell) == 0 
 end
@@ -239,29 +266,21 @@ function KoreanMorgana:GetDistance2D(p1,p2)
 end
 
 function KoreanMorgana:AutoE()
-	if self:IsReady(_E) then
-		local threat
-		for i = 1, Game.HeroCount() do
-			local hero = Game.Hero(i)
-			if hero:IsValidTarget(self.E.Range, nil, myHero) and hero.isChanneling and hero.isEnemy then
-				local currSpell = hero.activeSpell
-				local spellPos = currSpell.placementPos
 
-				for i = 1, Game.HeroCount() do
+	for i = 1, Game.HeroCount() do
+		local hero = Game.Hero(i)
+		if hero and hero.isEnemy and hero.activeSpell.valid and hero.isChanneling then
+			local currSpell = hero.activeSpell
+			local spellPos = Vector(currSpell.placementPos.x, currSpell.placementPos.y, currSpell.placementPos.z)
+			for i = 1, Game.HeroCount() do
     			local ally = Game.Hero(i)
-    				if ally and ally.isAlly and not ally.networkID == myHero.networkID then
-	  					if self:GetDistance(ally.pos, spellPos) < 100 or currSpell.target == ally.handle then
-	  						Control.CastSpell(HK_E, ally.pos)
-							self.tickAction = true
-    					end
-  					end
+    			if ally and ally.isAlly then
+	  				if (self:GetDistance(ally.pos, spellPos) < currSpell.width + (ally.boundingRadius * 1.5)) or currSpell.target == ally.handle then
+	  					Control.CastSpell(HK_E, ally.pos)
+						self.tickAction = true
+    				end
   				end
-
-				if self:GetDistance(spellPos, myHero.pos) < 100 or currSpell.target == myHero.handle then
-					Control.CastSpell(HK_E, myHero.pos)
-					self.tickAction = true
-				end
-			end
+  			end
 		end
 	end
 end
@@ -289,65 +308,16 @@ function KoreanMorgana:StartQ()
 				DelayAction(function()
 				local posAfterAutoAttack = target.pos:Extended(self.lastPath, 50)
 				Draw.Circle(posAfterAutoAttack)
-				self:fast(HK_Q, target, posAfterAutoAttack, 100) end,
+				DelayAction(Control.CastSpell(HK_Q, posAfterAutoAttack), 0.1) end,
 				self.ShootDelay[target.charName])
 				self.ShootDelay[target.charName] = nil	
 			else
 				local posAfterAutoAttack = target.pos:Extended(self.lastPath, 75)
 				Draw.Circle(posAfterAutoAttack)
-				self:fast(HK_Q, target, posAfterAutoAttack, 100)
+				DelayAction(Control.CastSpell(HK_Q, posAfterAutoAttack), 0.1)
 			end
 		elseif self.Menu.Combo.HotKeyChanger:Value() ~= true then
-			self:fast(HK_Q, target, self:Prediction(target), 200)
-		end
-	end
-end
-
-local timer = {state = 0, tick = GetTickCount(), casting = GetTickCount() - 1000, mouse = mousePos}
-function KoreanMorgana:fast(spell, unit, prediction, delay)
-	if unit == nil then 
-		return 
-	end
-	local target = prediction:To2D()
-	local unit2 = unit
-	local myHeroPos = myHero.pos
-	local targetPos = unit2.pos
-	local shootsbackwards
-	local ticker = GetTickCount()
-	
-	
-	if timer.state == 0 and ticker - timer.tick > delay then
-		timer.state = 1
-		timer.mouse = mousePos
-		timer.tick = ticker
-		self.predi = prediction
-	end
-
-	if timer.state == 1 then
-		
-		if ticker - timer.tick >= 100 and ticker - timer.tick <= 1000 then
-			
-			if ticker - timer.tick > 100 and ticker - timer.tick < 500 and self:IsReady(_Q) and targetPos:ToScreen().onScreen then
-				if self:GetDistance(self.predi, unit.pos) > 600 then
-					return
-				end
-				Control.SetCursorPos(target.x, target.y)
-				if self:GetDistance(mousePos, targetPos) > self:GetDistance(myHeroPos, targetPos) and self:GetDistance(mousePos, prediction) > 100 then
-					return
-				else
-					Control.CastSpell(spell)
-					self.tickAction = true
-				end
-				
-
-			end
-			if ticker - timer.tick > 501 and self:IsReady(_Q) == false then
-				Control.SetCursorPos(timer.mouse)
-				timer.state = 0
-				
-			end
-
-			
+			DelayAction(Control.CastSpell(HK_Q, self:Prediction(target)), 0.2)
 		end
 	end
 end
@@ -380,9 +350,15 @@ function KoreanMorgana:OnTick()
 	
 	if myHero.dead then return end
 
-	self.tickAction = false
+	self.tickAction = nil
 
 	if self.tickAction then self.tickAction = false return end
+
+	self:LazyZhonyas()
+
+	if self:IsReady(_E) then
+		self:AutoE()
+	end
 
 	local target = self:GetTarget(1150)
 
@@ -394,10 +370,6 @@ function KoreanMorgana:OnTick()
 		end
 		
 		self:GetOrbMode()
-
-		if self:IsReady(_E) then
-			self:AutoE()
-		end
 
 		if self.combo then
 			if GetTickCount() - timer.tick > 4000 then
@@ -416,7 +388,6 @@ end
 function KoreanMorgana:GetOrbMode()
 
 	self.combo, self.harass, self.lastHit, self.laneClear, self.jungleClear, self.canMove, self.canAttack = nil,nil,nil,nil,nil,nil,nil
-
 		
 	if _G.EOWLoaded then
 
