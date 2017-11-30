@@ -89,7 +89,7 @@ function KoreanMorgana:LoadMenu()
 end
 
 function KoreanMorgana:LoadSpells()
-	self.Q = {range = 850, delay = 0.25, radius = 235, speed = myHero:GetSpellData(_Q).speed, width = myHero:GetSpellData(_Q).width}
+	self.Q = {range = 1150, delay = 0.25, radius = 235, speed = myHero:GetSpellData(_Q).speed, width = myHero:GetSpellData(_Q).width}
 	self.W = {range = 900, delay = 0, radius = 275, speed = math.huge}
 	self.E = {range = 800, delay = 0, radius = 0, speed = math.huge}
 	self.R = {range = 625, delay = 0, radius = myHero:GetSpellData(_R).radius, speed = math.huge}
@@ -200,7 +200,8 @@ function KoreanMorgana:GetTarget(range)
 end
 
 function KoreanMorgana:AutoW()
-	local target = self:GetTarget(1000)
+	local target = self:GetTarget(self.W.range)
+	if not target then return end
 	if target:IsValidTarget(self.W.Range, nil, myHero) and self:IsReady(_W) then
 		if self:IsSnared(target) then
 			Control.CastSpell(HK_W, target.pos)
@@ -248,9 +249,9 @@ function KoreanMorgana:AutoE()
 
 				for i = 1, Game.HeroCount() do
     			local ally = Game.Hero(i)
-    				if ally and ally.isAlly then
-	  					if self:GetDistance(ally.pos, myHero.pos) < 100 or currSpell.target == ally.handle then
-	  						Control.CastSpell(HK_E, myHero.pos)
+    				if ally and ally.isAlly and not ally.networkID == myHero.networkID then
+	  					if self:GetDistance(ally.pos, spellPos) < 100 or currSpell.target == ally.handle then
+	  						Control.CastSpell(HK_E, ally.pos)
 							self.tickAction = true
     					end
   					end
@@ -277,9 +278,9 @@ end
 local timeDash = 0
 function KoreanMorgana:StartQ()
 
-	local target = self:GetTarget(1000)
+	local target = self:GetTarget(1150)
 
-	if target == nil or not target:IsValidTarget(1000, nil, myHero) then return end
+	if target == nil or not target:IsValidTarget(1150, nil, myHero) then return end
 
 	if self:IsReady(_Q) and self.Menu.Combo.ComboQ:Value() and target:GetCollision(self.Q.width, self.Q.speed, self.Q.delay) == 0 then
 		if target.activeSpell.windup > 0.1 and self.Menu.Combo.HotKeyChanger:Value()  then
@@ -383,10 +384,10 @@ function KoreanMorgana:OnTick()
 
 	if self.tickAction then self.tickAction = false return end
 
-	local target = self:GetTarget(1000)
+	local target = self:GetTarget(1150)
 
 	if target then 
-		if not target:IsValidTarget(1000, nil, myHero) then return end
+		if not target:IsValidTarget(1150, nil, myHero) then return end
 
 		if self:xPath(target) ~= nil then
 			self.lastPath = self:xPath(target)
