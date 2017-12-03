@@ -11,15 +11,47 @@ function LazyMorgana:init()
     Callback.Add("Tick", function() self:OnTick() end)
 end
 
+function LazyMorgana:GetEnemyHeroes()
+
+	local _EnemyHeroes = {}
+  	for i = 1, Game.HeroCount() do
+    	local unit = Game.Hero(i)
+    	if unit and unit.isEnemy then
+	  		table.insert(_EnemyHeroes, unit)
+  		end
+  	end
+  	return _EnemyHeroes
+end
+
+function LazyMorgana:GetAllyHeroes()
+
+	local _AllyHeroes = {}	
+  	for i = 1, Game.HeroCount() do
+    	local unit = Game.Hero(i)
+    	if unit and unit.isAlly then
+	  		table.insert(_AllyHeroes, unit)
+  		end
+  	end
+  	return _AllyHeroes
+end
+
 function LazyMorgana:LoadMenu()
 
 	self.Menu = MenuElement({type = MENU, id = "LazyMorgana", name = "Lazy Morgana", leftIcon = "https://i.imgur.com/gMfL41n.png"})
 	self.Menu:MenuElement({type = MENU, id = "Combo", name = "Combo Settings"})
 	self.Menu.Combo:MenuElement({id = "qHotkey", name = "Q Hotkey | Wait for Spell", key = string.byte("T"), toggle = true, value = false})
+	self.Menu.Combo:MenuElement({id = "customCast", name = "Use custom SpellCast", value = true})
+	self.Menu.Combo:MenuElement({id = "customCastDelay", name = "Custom SpellCast Delay", value = 250, min = 0, max = 500, step = 25})
 	self.Menu.Combo:MenuElement({id = "UseQ", name = "Use Q", value = true})
 	self.Menu.Combo:MenuElement({id = "UseW", name = "Use W", value = true})
 	self.Menu.Combo:MenuElement({id = "UseE", name = "Use E", value = true})
+	self.Menu.Combo:MenuElement({id = "ePrio", 	name = "E Priorities", type = MENU, tooltip = "PRESS F6 2x TO MAKE IT WORK, higher number gets shielded"})
+	for i = 1, #self:GetAllyHeroes() do
+		local ally = self:GetAllyHeroes()[i]
+		self.Menu.Combo.ePrio:MenuElement({id = ally.charName, name = ally.charName, value = 1, min = 1, max = 5, step = 1})
+	end
 	self.Menu.Combo:MenuElement({id = "UseR", name = "Use R if #Enemies", value = 2, min = 1, max = 6, step = 1, tooltip = "set to 6 to disable"})
+	self.Menu.Combo:MenuElement({id = "UseZhonyas", name = "Use Zhonyas at % Health", value = 40, min = 0, max = 100, step = 1, tooltip = "set to 0 to disable"})
 
 	self.Menu:MenuElement({type = MENU, id = "Draw", name = "Draw Settings"})
 	self.Menu.Draw:MenuElement({id = "DrawQ", name = "Q Range", value = true})
@@ -35,24 +67,6 @@ function LazyMorgana:LoadSpells()
 	self.W = {range = 900, delay = 0, width = myHero:GetSpellData(_W).width, speed = math.huge}
 	self.E = {range = 800}
 	self.R = {range = 625}
-end
-
--------------------------------- Thnx Noddy ;) -----------------------------------
-
-function LazyMorgana:GetEnemyHeroes()
-
-	local _EnemyHeroes = {}	
-  	if _EnemyHeroes then return _EnemyHeroes end
-
-  	for i = 1, Game.HeroCount() do
-    	local unit = Game.Hero(i)
-    	if unit and unit.isEnemy and unit.team ~= 300 then
-	  		if _EnemyHeroes == nil then
-	  			table.insert(_EnemyHeroes, unit)
-    		end
-  		end
-  	end
-  	return _EnemyHeroes
 end
 
 function LazyMorgana:OnVision(unit)
@@ -118,6 +132,42 @@ function LazyMorgana:GetPred(unit,speed,delay,sourcePos)
 	end
 end
 
+function LazyMorgana:CustomSpellCast(spell,pos,delay)
+
+	local castSpell = {state = 0, tick = GetTickCount(), casting = GetTickCount() - 1000, mouse = mousePos}
+	local delay = delay or 250
+	local ticker = GetTickCount()
+
+	if pos == nil then return end
+
+	if castSpell.state == 0 and ticker - castSpell.casting > delay + Game.Latency() then
+		castSpell.state = 1
+		castSpell.mouse = mousePos
+		castSpell.tick = ticker
+	end
+
+	if castSpell.state == 1 then
+
+		if ticker - castSpell.tick < Game.Latency() then
+			Control.SetCursorPos(pos)
+			Control.KeyDown(spell)
+			Control.KeyUp(spell)
+			castSpell.casting = ticker + delay
+			DelayAction(function()
+				if castSpell.state == 1 then
+					Control.SetCursorPos(castSpell.mouse)
+					castSpell.state = 0
+				end
+			end, Game.Latency()/1000)
+		end
+
+		if ticker - castSpell.casting > Game.Latency() then
+			Control.SetCursorPos(castSpell.mouse)
+			castSpell.state = 0
+		end
+	end
+end
+
 -------------------------------- Thnx Noddy ;) -----------------------------------
 
 function LazyMorgana:GetEnemiesInRange(range)
@@ -125,11 +175,23 @@ function LazyMorgana:GetEnemiesInRange(range)
 	local enemyTable = {}
 	for i = 1, Game.HeroCount() do
 		local enemy = Game.Hero(i)
-		if enemy and enemy.isEnemy and not enemy.dead and self:GetDistance(enemy.pos, myHero.pos) <= range and enemy:IsValidTarget(self.R.Range, nil, myHero) then
+		if enemy and enemy.isEnemy and not enemy.dead and self:GetDistance(enemy.pos, myHero.pos) <= range and enemy:IsValidTarget(range, nil, myHero) then
 			table.insert(enemyTable, enemy)
 		end
 	end
 	return enemyTable
+end
+
+function LazyMorgana:GetAlliesInRange(range)
+
+	local allyTable = {}
+	for i = 1, Game.HeroCount() do
+		local ally = Game.Hero(i)
+		if ally and ally.isAlly and not ally.dead and self:GetDistance(ally.pos, myHero.pos) <= range and ally:IsValidTarget(range, nil, myHero) then
+			table.insert(allyTable, ally)
+		end
+	end
+	return allyTable
 end
 
 function LazyMorgana:CanUseSpell(spell)
@@ -180,10 +242,18 @@ function LazyMorgana:Ulting()
 	return false 
 end
 
+function LazyMorgana:GetHpPercent(unit)
+    return unit.health / unit.maxHealth * 100
+end
+
+function LazyMorgana:GetManaPercent(unit)
+    return unit.mana / unit.maxMana * 100
+end
+
 function LazyMorgana:LazyZhonyas()
 
 	local zhonyas = self:GetInventoryItem(3157)
-	if self:Ulting() and zhonyas then
+	if zhonyas and self.Menu.Combo.UseZhonyas:Value() >= self:GetHpPercent(myHero) then
 		Control.CastSpell(items[zhonyas])
 	end		
 end
@@ -220,10 +290,18 @@ function LazyMorgana:CastQ()
 	if not pred then return end
 
 	if target:GetCollision(self.Q.width, self.Q.speed, self.Q.delay) == 0 then
-		if target.activeSpell.windup > 0.1 and self.Menu.Combo.qHotkey:Value()  then
-			Control.CastSpell(HK_Q, pred)
+		if target.activeSpell.windup > 0.1 and self.Menu.Combo.qHotkey:Value() then
+			if self.Menu.Combo.customCast:Value() then
+				self:CustomSpellCast(HK_Q, pred, self.Menu.Combo.customCastDelay:Value())
+			else
+				Control.CastSpell(HK_Q, pred)
+			end
 		elseif self.Menu.Combo.qHotkey:Value() ~= true then
-			Control.CastSpell(HK_Q, pred)
+			if self.Menu.Combo.customCast:Value() then
+				self:CustomSpellCast(HK_Q, pred, self.Menu.Combo.customCastDelay:Value())
+			else
+				Control.CastSpell(HK_Q, pred)
+			end
 		end
 	end
 end
@@ -234,31 +312,104 @@ function LazyMorgana:CastW()
 	if not target or not target:IsValidTarget(self.W.Range, nil, myHero) then return end
 
 	if self:IsImmobile(target) then
-		Control.CastSpell(HK_W, target.pos)
+		if self.Menu.Combo.customCast:Value() then
+				self:CustomSpellCast(HK_W, target.pos, self.Menu.Combo.customCastDelay:Value())
+			else
+				Control.CastSpell(HK_W, target.pos)
+			end
 		self.tickAction = true
 	end
 end
 
+function LazyMorgana:CastE2(unit)
+	if self.Menu.Combo.customCast:Value() then
+
+	  	self:CustomSpellCast(HK_E, unit, self.Menu.Combo.customCastDelay:Value())
+	else
+		Control.CastSpell(HK_E, unit)
+	end
+	self.tickAction = true
+end
+
 function LazyMorgana:CastE()
 
-	for i = 1, Game.HeroCount() do
-		local hero = Game.Hero(i)
-		if hero and hero.isEnemy and hero.activeSpell.valid and hero.isChanneling then
+	local spellPos = nil
+	local activeSpell = nil
+	local ally = nil
+	local ally2 = nil
+	local allyName = nil
+	local ally2Name = nil
 
-			local activeSpell = hero.activeSpell
-			local spellPos = Vector(activeSpell.placementPos.x, activeSpell.placementPos.y, activeSpell.placementPos.z)
-			for i = 1, Game.HeroCount() do
+	for i = 1, #self:GetEnemyHeroes() do
 
-    			local ally = Game.Hero(i)
-    			if ally and ally.isAlly and ally:IsValidTarget(self.E.Range, nil, myHero) then
-	  				if (self:GetDistance(ally.pos, spellPos) < activeSpell.width + (ally.boundingRadius * 1.5)) or activeSpell.target == ally.handle then
-	  					Control.CastSpell(HK_E, ally.pos)
-						self.tickAction = true
-    				end
-  				end
-  			end
+		local enemy = self:GetEnemyHeroes()[i]
+		if enemy and enemy.activeSpell.valid and enemy.isChanneling then
+
+			activeSpell = enemy.activeSpell
+			spellPos = Vector(activeSpell.placementPos.x, activeSpell.placementPos.y, activeSpell.placementPos.z)
 		end
 	end
+
+	if spellPos ~= nil then
+
+		for j = 1, #self:GetAllyHeroes() do
+
+			ally = self:GetAllyHeroes()[j]
+
+			for k = 1, #self:GetAllyHeroes() do
+				ally2 = self:GetAllyHeroes()[k]
+			end
+			
+			if ally ~= nil then
+				allyName = ally.charName
+			end
+
+			if ally2 ~= nil then
+				ally2Name = ally2.charName
+			end			
+
+			if not ally then return end
+
+			if self:GetDistance(ally.pos, myHero.pos) <= self.E.range then 
+
+	  			if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle then	  			
+	  				self:CastE2(ally)
+    			end
+  			end
+
+			if #self:GetAlliesInRange(self.E.range) == 1 or not ally2 then return end
+
+			if self:GetDistance(ally.pos, myHero.pos) <= self.E.range and self:GetDistance(ally2.pos, myHero.pos) <= self.E.range then 
+
+	  			if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle and
+	  				self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius * 2.5 or activeSpell.target == ally2.handle then	  			
+
+	  				if ally.networkID ~= ally2.networkID then
+
+	  					if self.Menu.Combo.ePrio.allyName:Value() > self.Menu.Combo.ePrio.ally2Name:Value() then
+	  						self:CastE2(ally)
+						elseif self.Menu.Combo.ePrio.allyName:Value() == self.Menu.Combo.ePrio.ally2Name:Value() then
+							self:CastE2(ally)
+						else
+							self:CastE2(ally2)
+						end
+	  				end
+	  			elseif self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle and
+	  				self:GetDistance(ally2.pos, spellPos) > ally2.boundingRadius * 2.5 or activeSpell.target ~= ally2.handle then
+					self:CastE2(ally)
+				elseif self:GetDistance(ally.pos, spellPos) > ally.boundingRadius * 2.5 or activeSpell.target ~= ally.handle and
+	  				self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius * 2.5 or activeSpell.target == ally2.handle then
+					self:CastE2(ally2)
+    			end
+  			end
+  		end
+  	ally = nil
+  	ally2 = nil
+  	spellPos = nil
+  	activeSpell = nil
+  	allyName = nil
+	ally2Name = nil
+  	end
 end
 
 function LazyMorgana:CastR()
@@ -272,7 +423,7 @@ function LazyMorgana:Draw()
 	
 	local text2d = myHero.pos:To2D()
 	if self.Menu.Combo.qHotkey:Value() then
-		Draw.Text("Korean Q", text2d.x - 20, text2d.y + 50)
+		Draw.Text("Korean Q", 12,text2d.x - 20, text2d.y + 50, Draw.Color(255,148,0,211))
 	end
 	if self.Menu.Draw.DrawQ:Value() then
 		Draw.Circle(myHero.pos, self.Q.range, 1, Draw.Color(255, 255, 255, 255))
@@ -294,7 +445,7 @@ function LazyMorgana:OnLoad()
 end
 
 function LazyMorgana:OnTick()
-	
+
 	if myHero.dead then return end
 
 	self.tickAction = nil
