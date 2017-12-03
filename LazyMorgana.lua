@@ -4,6 +4,8 @@ Callback.Add("Load", function() LazyMorgana:OnLoad() end)
 
 function LazyMorgana:init()
 
+	if myHero.charName ~= "Morgana" then return end
+	
     self:LoadSpells()
     self:LoadMenu()
 
