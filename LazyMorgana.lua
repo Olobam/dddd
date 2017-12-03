@@ -371,11 +371,14 @@ function LazyMorgana:CastE()
 
 			if not ally then return end
 
-			if self:GetDistance(ally.pos, myHero.pos) <= self.E.range then 
+			if #self:GetAlliesInRange(self.E.range) == 1 then
 
-	  			if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle then	  			
-	  				self:CastE2(ally)
-    			end
+				if self:GetDistance(ally.pos, myHero.pos) <= self.E.range then 
+
+	  				if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle then	  			
+	  					self:CastE2(ally)
+    				end
+  				end
   			end
 
 			if #self:GetAlliesInRange(self.E.range) == 1 or not ally2 then return end
@@ -390,7 +393,7 @@ function LazyMorgana:CastE()
 	  					if self.Menu.Combo.ePrio[allyName]:Value() > self.Menu.Combo.ePrio[ally2Name]:Value() then
 	  						self:CastE2(ally)
 						elseif self.Menu.Combo.ePrio[allyName]:Value() == self.Menu.Combo.ePrio[ally2Name]:Value() then
-							self:CastE2(ally)
+							self:CastE2(ally2)
 						else
 							self:CastE2(ally2)
 						end
