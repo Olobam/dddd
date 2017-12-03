@@ -194,11 +194,6 @@ function LazyMorgana:GetAlliesInRange(range)
 	return allyTable
 end
 
-function LazyMorgana:CanUseSpell(spell)
-
-	return myHero:GetSpellData(spell).currentCd == 0 and myHero:GetSpellData(spell).level > 0 and myHero:GetSpellData(spell).mana <= myHero.mana
-end
-
 local items = { [ITEM_1] = HK_ITEM_1, [ITEM_2] = HK_ITEM_2, [ITEM_3] = HK_ITEM_3, [ITEM_4] = HK_ITEM_4, [ITEM_5] = HK_ITEM_5, [ITEM_6] = HK_ITEM_6 }
 
 function LazyMorgana:GetInventoryItem(itemID)
