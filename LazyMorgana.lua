@@ -338,7 +338,7 @@ function LazyMorgana:CastE()
 	for i = 1, #self:GetEnemyHeroes() do
 
 		local enemy = self:GetEnemyHeroes()[i]
-		if enemy and enemy.activeSpell.valid and enemy.isChanneling then
+		if enemy and enemy.activeSpell.valid and enemy.isChanneling and enemy.pos2D.onScreen and enemy.activeSpell.range ~= 20000 then
 
 			activeSpell = enemy.activeSpell
 			spellPos = Vector(activeSpell.placementPos.x, activeSpell.placementPos.y, activeSpell.placementPos.z)
@@ -398,12 +398,6 @@ function LazyMorgana:CastE()
     			end
   			end
   		end
-  	ally = nil
-  	ally2 = nil
-  	spellPos = nil
-  	activeSpell = nil
-  	allyName = nil
-	ally2Name = nil
   	end
 end
 
