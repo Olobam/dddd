@@ -371,38 +371,38 @@ function LazyMorgana:CastE()
 
 			if not ally then return end
 
-			if #self:GetAlliesInRange(self.E.range) == 1 then
+			if #self:GetAlliesInRange(1000) == 1 then
 
 				if self:GetDistance(ally.pos, myHero.pos) <= self.E.range then 
 
-	  				if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle then	  			
+	  				if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius or activeSpell.target == ally.handle then	  			
 	  					self:CastE2(ally)
     				end
   				end
   			end
 
-			if #self:GetAlliesInRange(self.E.range) == 1 or not ally2 then return end
+			if #self:GetAlliesInRange(1000) == 1 or not ally2 then return end
 
 			if self:GetDistance(ally.pos, myHero.pos) <= self.E.range and self:GetDistance(ally2.pos, myHero.pos) <= self.E.range then 
 
-	  			if (self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle) and
-	  				(self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius * 2.5 or activeSpell.target == ally2.handle) then	  			
+	  			if (self:GetDistance(ally.pos, spellPos) < ally.boundingRadius or activeSpell.target == ally.handle) and
+	  				(self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius or activeSpell.target == ally2.handle) then	  			
 
 	  				if ally.networkID ~= ally2.networkID then
 
 	  					if self.Menu.Combo.ePrio[allyName]:Value() > self.Menu.Combo.ePrio[ally2Name]:Value() then
 	  						self:CastE2(ally)
 						elseif self.Menu.Combo.ePrio[allyName]:Value() == self.Menu.Combo.ePrio[ally2Name]:Value() then
-							self:CastE2(ally2)
+							self:CastE2(ally)
 						else
 							self:CastE2(ally2)
 						end
 	  				end
-	  			elseif self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle and
-	  				self:GetDistance(ally2.pos, spellPos) > ally2.boundingRadius * 2.5 or activeSpell.target ~= ally2.handle then
+	  			elseif (self:GetDistance(ally.pos, spellPos) < ally.boundingRadius or activeSpell.target == ally.handle) and
+	  				(self:GetDistance(ally2.pos, spellPos) > ally2.boundingRadius and activeSpell.target ~= ally2.handle) then
 					self:CastE2(ally)
-				elseif self:GetDistance(ally.pos, spellPos) > ally.boundingRadius * 2.5 or activeSpell.target ~= ally.handle and
-	  				self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius * 2.5 or activeSpell.target == ally2.handle then
+				elseif (self:GetDistance(ally.pos, spellPos) > ally.boundingRadius and activeSpell.target ~= ally.handle) and
+	  				(self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius or activeSpell.target == ally2.handle) then
 					self:CastE2(ally2)
     			end
   			end
