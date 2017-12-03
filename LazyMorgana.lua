@@ -338,10 +338,14 @@ function LazyMorgana:CastE()
 	for i = 1, #self:GetEnemyHeroes() do
 
 		local enemy = self:GetEnemyHeroes()[i]
-		if enemy and enemy.activeSpell.valid and enemy.isChanneling and enemy.pos2D.onScreen and enemy.activeSpell.range ~= 20000 then
+		if enemy and enemy.activeSpell.valid and enemy.isChanneling and enemy.activeSpell.range ~= 20000 then
 
 			activeSpell = enemy.activeSpell
-			spellPos = Vector(activeSpell.placementPos.x, activeSpell.placementPos.y, activeSpell.placementPos.z)
+			local tempSpellPos = Vector(activeSpell.placementPos.x, activeSpell.placementPos.y, activeSpell.placementPos.z)
+
+			if tempSpellPos:To2D().onScreen then
+				spellPos = tempSpellPos
+			end
 		end
 	end
 
@@ -376,14 +380,14 @@ function LazyMorgana:CastE()
 
 			if self:GetDistance(ally.pos, myHero.pos) <= self.E.range and self:GetDistance(ally2.pos, myHero.pos) <= self.E.range then 
 
-	  			if self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle and
-	  				self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius * 2.5 or activeSpell.target == ally2.handle then	  			
+	  			if (self:GetDistance(ally.pos, spellPos) < ally.boundingRadius * 2.5 or activeSpell.target == ally.handle) and
+	  				(self:GetDistance(ally2.pos, spellPos) < ally2.boundingRadius * 2.5 or activeSpell.target == ally2.handle) then	  			
 
 	  				if ally.networkID ~= ally2.networkID then
 
-	  					if self.Menu.Combo.ePrio.allyName:Value() > self.Menu.Combo.ePrio.ally2Name:Value() then
+	  					if self.Menu.Combo.ePrio[allyName]:Value() > self.Menu.Combo.ePrio[ally2Name]:Value() then
 	  						self:CastE2(ally)
-						elseif self.Menu.Combo.ePrio.allyName:Value() == self.Menu.Combo.ePrio.ally2Name:Value() then
+						elseif self.Menu.Combo.ePrio[allyName]:Value() == self.Menu.Combo.ePrio[ally2Name]:Value() then
 							self:CastE2(ally)
 						else
 							self:CastE2(ally2)
