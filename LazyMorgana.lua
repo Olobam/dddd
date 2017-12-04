@@ -11,6 +11,7 @@ function LazyMorgana:init()
 
     Callback.Add("Draw", function() self:Draw() end)
     Callback.Add("Tick", function() self:OnTick() end)
+	Callback.Add("Tick", function() self:OnVisionF() end)
 end
 
 function LazyMorgana:GetEnemyHeroes()
