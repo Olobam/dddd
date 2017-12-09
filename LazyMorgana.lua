@@ -413,7 +413,7 @@ end
 
 function LazyMorgana:CastR()
 
-	if #self:GetEnemiesInRange(self.R.range) >= self.Menu.Combo.UseR:Value() then
+	if #self:GetEnemiesInRange(myHero.pos, self.R.range) >= self.Menu.Combo.UseR:Value() then
 		Control.CastSpell(HK_R)
 	end
 end
