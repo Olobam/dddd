@@ -173,16 +173,16 @@ end
 
 -------------------------------- Thnx Noddy ;) -----------------------------------
 
-function LazyMorgana:GetEnemiesInRange(range)
+function LazyMorgana:GetEnemiesInRange(pos, range)
 
-	local enemyTable = {}
-	for i = 1, Game.HeroCount() do
-		local enemy = Game.Hero(i)
-		if enemy and enemy.isEnemy and not enemy.dead and self:GetDistance(enemy.pos, myHero.pos) <= range and enemy:IsValidTarget(range, nil, myHero) then
-			table.insert(enemyTable, enemy)
-		end
-	end
-	return enemyTable
+	local _EnemyHeroes = {}
+  	for i = 1, Game.HeroCount() do
+    	local unit = Game.Hero(i)
+    	if unit and unit.isEnemy and self:GetDistance(pos, unit.pos) <= range then
+	  		table.insert(_EnemyHeroes, unit)
+  		end
+  	end
+  	return _EnemyHeroes
 end
 
 function LazyMorgana:GetAlliesInRange(range)
@@ -251,7 +251,7 @@ end
 function LazyMorgana:LazyZhonyas()
 
 	local zhonyas = self:GetInventoryItem(3157)
-	if zhonyas and self.Menu.Combo.UseZhonyas:Value() >= self:GetHpPercent(myHero) then
+	if zhonyas and self.Menu.Combo.UseZhonyas:Value() >= self:GetHpPercent(myHero) and #self:GetEnemiesInRange(myHero.pos, 1000) > 0 then
 		Control.CastSpell(items[zhonyas])
 	end		
 end
