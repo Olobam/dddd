@@ -43,26 +43,8 @@ end
 
 function LazyUtility:LoadMenu()
 
-	self.Menu = MenuElement({id = "MainMenu", name = "Lazy Utility", type = MENU, leftIcon = self.Nudes.Sexy })
-		self.Menu:MenuElement({ id = "wPtracker", name = "WayPoint Tracker", type = MENU, leftIcon = self.Nudes.wayPoints })
-			self.Menu.wPtracker:MenuElement({ id = "toggle", name = "On / Off Toggle", key = string.byte("T"), toggle = true })
-			self.Menu.wPtracker:MenuElement({ id = "eta", name = "Show ETA", value = true })
-
-			self.Menu.wPtracker:MenuElement({ id = "showAllies", name = "Show Ally Paths", value = false })
-				self.Menu.wPtracker:MenuElement({ id = "allyColors", name = "Ally Color", tooltip = "color and opacity for your teams paths", type = MENU, leftIcon = self.Nudes.Rainbows })
-					self.Menu.wPtracker.allyColors:MenuElement({ id = "opacity", name = "Opacity", value = 255, min = 0, max = 255, step = 1 })
-					self.Menu.wPtracker.allyColors:MenuElement({ id = "red", name = "Red", value = 0, min = 0, max = 255, step = 1 })
-					self.Menu.wPtracker.allyColors:MenuElement({ id = "green", name = "Green", value = 255, min = 0, max = 255, step = 1 })
-					self.Menu.wPtracker.allyColors:MenuElement({ id = "blue", name = "Blue", value = 0, min = 0, max = 255, step = 1 })
-
-			self.Menu.wPtracker:MenuElement({ id = "showEnemies", name = "Show Enemy Paths", value = true })
-				self.Menu.wPtracker:MenuElement({ id = "enemyColors", name = "Enemy Color", tooltip = "color and opacity for enemy teams paths", type = MENU, leftIcon = self.Nudes.Rainbows })
-					self.Menu.wPtracker.enemyColors:MenuElement({ id = "opacity", name = "Opacity", value = 255, min = 0, max = 255, step = 1 })
-					self.Menu.wPtracker.enemyColors:MenuElement({ id = "red", name = "Red", value = 255, min = 0, max = 255, step = 1 })
-					self.Menu.wPtracker.enemyColors:MenuElement({ id = "green", name = "Green", value = 0, min = 0, max = 255, step = 1 })
-					self.Menu.wPtracker.enemyColors:MenuElement({ id = "blue", name = "Blue", value = 0, min = 0, max = 255, step = 1 })
-
-		self.Menu:MenuElement({ id = "mMtracker", name = "Minimap Tracker", type = MENU, leftIcon = self.Nudes.minimap })
+	self.Menu = Menu({id = "MainMenu", name = "Lazy Utility", type = MENU, leftIcon = self.Nudes.Sexy })
+		self.Menu:Menu({ id = "mMtracker", name = "Minimap Tracker", type = MENU, leftIcon = self.Nudes.minimap })
 			self.Menu.mMtracker:MenuElement({ id = "show", name = "MiniMap tracker", value = true, tooltip = "tracks last seen position on MiniMap" })
 
 --Activator
